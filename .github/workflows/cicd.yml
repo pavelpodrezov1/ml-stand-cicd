@@ -35,7 +35,7 @@ jobs:
 
       - name: Install pymlsec from GitHub
         run: |
-          pip install "git+https://github.com/YOUR_GITHUB_USERNAME/pymlsec.git"
+          pip install "git+https://github.com/pavelpodrezov1/pymlsec.git"
 
       - name: Run pymlsec audit
         run: |
