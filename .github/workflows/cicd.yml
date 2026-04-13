@@ -1,0 +1,57 @@
+name: ml-stand-cicd
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  train-test-audit-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install runtime dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install -r requirements-dev.txt
+
+      - name: Train model
+        run: |
+          python train.py
+
+      - name: Run tests
+        run: |
+          pytest -q
+
+      - name: Install pymlsec from GitHub
+        run: |
+          pip install "git+https://github.com/YOUR_GITHUB_USERNAME/pymlsec.git"
+
+      - name: Run pymlsec audit
+        run: |
+          pymlsec scan \
+            --mode env \
+            --python "$(which python)" \
+            --output pymlsec-out \
+            --fail-on-severity high \
+            --insecure-bdu
+
+      - name: Build Docker image
+        run: |
+          docker build -t ml-stand-cicd:latest .
+
+      - name: Upload audit artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: pymlsec-audit-report
+          path: pymlsec-out/
