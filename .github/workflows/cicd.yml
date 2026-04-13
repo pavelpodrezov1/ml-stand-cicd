@@ -19,30 +19,48 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Install runtime dependencies
+      - name: Install system packages for PDF rendering
         run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libpango-1.0-0 \
+            libcairo2 \
+            libgdk-pixbuf-2.0-0 \
+            libffi-dev \
+            shared-mime-info
+
+      - name: Create ML environment
+        run: |
+          python -m venv .venv-ml
+          . .venv-ml/bin/activate
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pip install -r requirements-dev.txt
 
       - name: Train model
         run: |
+          . .venv-ml/bin/activate
           python train.py
 
       - name: Run tests
         run: |
+          . .venv-ml/bin/activate
           pytest -q
 
-      - name: Install pymlsec from GitHub
+      - name: Create audit environment
         run: |
+          python -m venv .venv-audit
+          . .venv-audit/bin/activate
+          python -m pip install --upgrade pip
           pip install "git+https://github.com/pavelpodrezov1/pymlsec.git"
+          pip install weasyprint
 
       - name: Run pymlsec audit
-        id: pymlsec_audit
         run: |
+          . .venv-audit/bin/activate
           pymlsec scan \
             --mode env \
-            --python "$(which python)" \
+            --python "$GITHUB_WORKSPACE/.venv-ml/bin/python" \
             --output pymlsec-out \
             --fail-on-severity high \
             --insecure-bdu
@@ -67,3 +85,4 @@ jobs:
           path: |
             Dockerfile
             requirements.txt
+            requirements-dev.txt
