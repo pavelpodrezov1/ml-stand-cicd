@@ -2,9 +2,9 @@ name: ml-stand-cicd
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
   train-test-audit-build:
@@ -38,6 +38,7 @@ jobs:
           pip install "git+https://github.com/pavelpodrezov1/pymlsec.git"
 
       - name: Run pymlsec audit
+        id: pymlsec_audit
         run: |
           pymlsec scan \
             --mode env \
@@ -46,12 +47,23 @@ jobs:
             --fail-on-severity high \
             --insecure-bdu
 
+      - name: Upload audit artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: pymlsec-report
+          path: pymlsec-out/
+
       - name: Build Docker image
+        if: success()
         run: |
           docker build -t ml-stand-cicd:latest .
 
-      - name: Upload audit artifacts
+      - name: Upload Docker build metadata
+        if: success()
         uses: actions/upload-artifact@v4
         with:
-          name: pymlsec-audit-report
-          path: pymlsec-out/
+          name: docker-build-info
+          path: |
+            Dockerfile
+            requirements.txt
